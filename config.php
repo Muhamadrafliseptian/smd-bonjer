@@ -25,7 +25,7 @@ define('ADMIN_PASS', 'smdB0nj4r!');
 // ---------------- Opsi hubungkan ke spreadsheet ----------------
 // Default aman: false → hanya simpan di JSON (lebih pribadi).
 // Set true + isi SHEET_API_URL supaya otomatis kirim ke Google Sheets.
-define('USE_SPREADSHEET', false);
+define('USE_SPREADSHEET', true);
 define('SHEET_API_URL', '');
 define('SHEET_CREDS', __DIR__ . '/data/service-account.json');
 
