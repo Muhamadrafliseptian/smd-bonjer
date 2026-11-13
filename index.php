@@ -14,6 +14,7 @@ require_once __DIR__ . '/view.php';
 require_once __DIR__ . '/database.php';
 
 $isAdmin = isset($_SESSION['admin_logged_in']) && $_SESSION['admin_logged_in'] === true;
+$self = basename($_SERVER['SCRIPT_NAME'] ?? 'index.php'); // form ini bisa dinamai index.php atau form.php
 
 $err = '';
 $saved = false;
@@ -87,7 +88,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if (!$found) {
         $out[] = $record;
     }
-    $ok = db_save(['surveys' => $out]);
+    $saveResult = db_save(['surveys' => $out]);
+    // Jangan hanya percaya nilai kembalian db_save(): cek langsung apakah data sudah ada di database.
+    $ok = false;
+    if ($saveResult !== false) {
+        foreach (db_all() as $r) {
+            if (isset($r['id']) && $r['id'] === $id) {
+                $ok = true;
+                break;
+            }
+        }
+    }
 
     $D = $clean;
     $formId = $isAdmin ? $id : '';
@@ -97,6 +108,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         log_aksi("Simpan kuesioner ID=$id dari " . ($_SERVER['REMOTE_ADDR'] ?? 'unknown'));
     } else {
         $err = 'Jawaban belum bisa disimpan. Coba tekan Simpan jawaban sekali lagi. Jika tetap gagal, hubungi petugas.';
+        if ($isAdmin) {
+            $err .= ' (Catatan admin: periksa apakah folder data/ dan file kuesioner.json bisa ditulis oleh server.)';
+        }
     }
 } elseif ($isAdmin && isset($_GET['edit_id'])) {
     $eid = (string)$_GET['edit_id'];
@@ -336,7 +350,7 @@ textarea.ctl{min-height:5.5em;resize:vertical;line-height:1.4}
                     }, $kurang))); ?> belum diisi.</p>
                 <?php endif; ?>
                 <div class="done-act">
-                    <a class="smd-btn" href="index.php">Isi untuk responden berikutnya</a>
+                    <a class="smd-btn" href="<?php echo smd_h($self); ?>">Isi untuk responden berikutnya</a>
                     <?php if ($isAdmin): ?><a class="smd-btn ghost" href="dashboard.php">Kembali ke dashboard</a><?php endif; ?>
                 </div>
             </div>
@@ -348,7 +362,7 @@ textarea.ctl{min-height:5.5em;resize:vertical;line-height:1.4}
                 <div class="segs" id="segs"></div>
             </div>
 
-            <form method="post" action="index.php" id="form_kuesioner" novalidate data-start="<?php echo $err !== '' ? 'last' : '0'; ?>">
+            <form method="post" action="<?php echo smd_h($self); ?>" id="form_kuesioner" novalidate data-start="<?php echo $err !== '' ? 'last' : '0'; ?>">
                 <input type="hidden" name="aksi" value="simpan">
                 <?php if ($formId !== ''): ?>
                     <input type="hidden" name="id" value="<?php echo smd_h($formId); ?>">
