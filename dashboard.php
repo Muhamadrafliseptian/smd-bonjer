@@ -13,9 +13,9 @@ if (!isset($_SESSION['admin_logged_in']) || $_SESSION['admin_logged_in'] !== tru
     exit;
 }
 
-$search      = trim((string)($_GET['search'] ?? ''));
-$status      = in_array($_GET['status'] ?? '', ['', 'valid', 'draft'], true) ? (string)($_GET['status'] ?? '') : '';
-$selectedKel = trim((string)($_GET['kelurahan'] ?? ''));
+$search       = trim((string)($_GET['search'] ?? ''));
+$status       = in_array($_GET['status'] ?? '', ['', 'valid', 'draft'], true) ? (string)($_GET['status'] ?? '') : '';
+$selectedKel  = trim((string)($_GET['kelurahan'] ?? ''));
 $selectedRisk = trim((string)($_GET['risiko'] ?? ''));
 
 // Proses Validasi (POST)
@@ -58,7 +58,9 @@ foreach ($allRows as $r) {
     }
 }
 
-// Filter Data
+// -------------------------------------------------------------
+// FILTERING DATA
+// -------------------------------------------------------------
 $filtered = $allRows;
 
 // 1. Filter Pencarian Teks Bebas
@@ -81,27 +83,23 @@ if ($status !== '') {
 // 3. Filter Berdasarkan Kelurahan
 if ($selectedKel !== '') {
     $filtered = array_values(array_filter($filtered, static function ($r) use ($selectedKel) {
-        $kel = $r['data']['kelurahan'] ?? '';
-        return $kel === $selectedKel;
+        $kel = trim((string)($r['data']['kelurahan'] ?? ''));
+        return strcasecmp($kel, $selectedKel) === 0;
     }));
 }
 
-// 4. Filter Berdasarkan Kondisi Kesehatan / Risiko (Format: field_nilai, misal: hipertensi_ya)
+// 4. Filter Berdasarkan Kondisi Kesehatan / Risiko (Format: field_nilai, misal: hipertensi_Ya)
 if ($selectedRisk !== '' && str_contains($selectedRisk, '_')) {
     [$field, $targetVal] = explode('_', $selectedRisk, 2);
     $filtered = array_values(array_filter($filtered, static function ($r) use ($field, $targetVal) {
-        $val = strtolower(trim((string)($r['data'][$field] ?? '')));
-        return $val === strtolower($targetVal);
+        $val = trim((string)($r['data'][$field] ?? ''));
+        return strcasecmp($val, $targetVal) === 0;
     }));
 }
 
-// Pagination (Jika menggunakan paginasi PHP standar bersama DataTables)
-$perPage    = 20;
+// Berikan data yang sudah terfilter ke variabel $rows agar dibaca oleh tabel
+$rows       = $filtered;
 $totalItems = count($filtered);
-$totalPages = max(1, (int)ceil($totalItems / $perPage));
-$page       = min(max(1, (int)($_GET['page'] ?? 1)), $totalPages);
-$offset     = ($page - 1) * $perPage;
-$rows       = array_slice($filtered, $offset, $perPage);
 
 // Render Halaman
 render_layout_start('Dashboard — ' . APP_NAME, 'dashboard');
