@@ -19,8 +19,8 @@ define('DATA_DIR', __DIR__ . '/data');
 define('DATA_FILE', __DIR__ . '/data/kuesioner.json');
 
 // ---------------- Akun admin (untuk dashboard/view data) ----------------
-define('ADMIN_USER', 'NRK');
-define('ADMIN_PASS', 'Adm#Sikda2026!rm');
+define('ADMIN_USER', 'adminsmd');
+define('ADMIN_PASS', 'smdB0nj4r!');
 
 // ---------------- Opsi hubungkan ke spreadsheet ----------------
 // Default aman: false → hanya simpan di JSON (lebih pribadi).
