@@ -1,4 +1,7 @@
 <?php
+/**
+ * dashboard.php — Halaman utama admin (rekapitulasi & manajemen data kuesioner).
+ */
 session_start();
 require_once __DIR__ . '/config.php';
 require_once __DIR__ . '/database.php';
@@ -10,8 +13,10 @@ if (!isset($_SESSION['admin_logged_in']) || $_SESSION['admin_logged_in'] !== tru
     exit;
 }
 
-$search = trim((string)($_GET['search'] ?? ''));
-$status = in_array($_GET['status'] ?? '', ['', 'valid', 'draft'], true) ? (string)($_GET['status'] ?? '') : '';
+$search      = trim((string)($_GET['search'] ?? ''));
+$status      = in_array($_GET['status'] ?? '', ['', 'valid', 'draft'], true) ? (string)($_GET['status'] ?? '') : '';
+$selectedKel = trim((string)($_GET['kelurahan'] ?? ''));
+$selectedRisk = trim((string)($_GET['risiko'] ?? ''));
 
 // Proses Validasi (POST)
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'valid' && !empty($_POST['id'])) {
@@ -29,7 +34,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'valid
     unset($row);
 
     if ($found && db_save(['surveys' => $allData])) {
-        log_aksi("Validasi kuesioner ID=$targetId");
         header('Location: ' . build_url('dashboard.php', ['msg' => 'Data kuesioner berhasil divalidasi.']));
     } else {
         header('Location: ' . build_url('dashboard.php', ['err' => 'Gagal memvalidasi data.']));
@@ -56,6 +60,8 @@ foreach ($allRows as $r) {
 
 // Filter Data
 $filtered = $allRows;
+
+// 1. Filter Pencarian Teks Bebas
 if ($search !== '') {
     $needle = mb_strtolower($search, 'UTF-8');
     $filtered = array_values(array_filter($filtered, static function ($r) use ($needle) {
@@ -67,11 +73,29 @@ if ($search !== '') {
     }));
 }
 
+// 2. Filter Berdasarkan Status (Valid / Draft)
 if ($status !== '') {
     $filtered = array_values(array_filter($filtered, static fn($r) => ($r['status'] ?? 'draft') === $status));
 }
 
-// Pagination
+// 3. Filter Berdasarkan Kelurahan
+if ($selectedKel !== '') {
+    $filtered = array_values(array_filter($filtered, static function ($r) use ($selectedKel) {
+        $kel = $r['data']['kelurahan'] ?? '';
+        return $kel === $selectedKel;
+    }));
+}
+
+// 4. Filter Berdasarkan Kondisi Kesehatan / Risiko (Format: field_nilai, misal: hipertensi_ya)
+if ($selectedRisk !== '' && str_contains($selectedRisk, '_')) {
+    [$field, $targetVal] = explode('_', $selectedRisk, 2);
+    $filtered = array_values(array_filter($filtered, static function ($r) use ($field, $targetVal) {
+        $val = strtolower(trim((string)($r['data'][$field] ?? '')));
+        return $val === strtolower($targetVal);
+    }));
+}
+
+// Pagination (Jika menggunakan paginasi PHP standar bersama DataTables)
 $perPage    = 20;
 $totalItems = count($filtered);
 $totalPages = max(1, (int)ceil($totalItems / $perPage));
