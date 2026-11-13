@@ -15,29 +15,28 @@ if (isset($_SESSION['admin_logged_in']) && $_SESSION['admin_logged_in'] === true
 $errorMsg = '';
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $user       = trim($_POST['user'] ?? '');
-    $password   = $_POST['password'] ?? '';
-    $inputCaptcha = strtoupper(trim($_POST['captcha'] ?? ''));
+    $user           = trim($_POST['user'] ?? '');
+    $password       = $_POST['password'] ?? '';
+    $inputCaptcha   = strtoupper(trim($_POST['captcha'] ?? ''));
     $sessionCaptcha = $_SESSION['captcha_code'] ?? '';
 
     // Validasi CAPTCHA terlebih dahulu
     if (empty($inputCaptcha) || $inputCaptcha !== $sessionCaptcha) {
         $errorMsg = 'Kode verifikasi (CAPTCHA) salah atau kedaluwarsa.';
     } elseif ($user === ADMIN_USER && $password === ADMIN_PASS) {
-        // Regenerasi session ID untuk mencegah session fixation
+        // Regenerasi session ID untuk keamanan
         session_regenerate_id(true);
         $_SESSION['admin_logged_in'] = true;
         $_SESSION['admin_user'] = $user;
         $_SESSION['admin_name'] = 'Petugas Kebon Jeruk';
 
-        log_aksi("Login admin berhasil dari " . ($_SERVER['REMOTE_ADDR'] ?? 'unknown'));
         header('Location: dashboard.php');
         exit;
     } else {
         $errorMsg = 'Nama pengguna atau kata sandi tidak valid.';
     }
 
-    // Hapus kode captcha lama setelah digunakan agar tidak bisa dipakai ulang
+    // Hapus kode captcha lama setelah digunakan
     unset($_SESSION['captcha_code']);
 }
 ?>
