@@ -348,7 +348,7 @@ textarea.ctl{min-height:5.5em;resize:vertical;line-height:1.4}
                 <div class="segs" id="segs"></div>
             </div>
 
-            <form method="post" action="ubdex.php" id="form_kuesioner" novalidate data-start="<?php echo $err !== '' ? 'last' : '0'; ?>">
+            <form method="post" action="index.php" id="form_kuesioner" novalidate data-start="<?php echo $err !== '' ? 'last' : '0'; ?>">
                 <input type="hidden" name="aksi" value="simpan">
                 <?php if ($formId !== ''): ?>
                     <input type="hidden" name="id" value="<?php echo smd_h($formId); ?>">
