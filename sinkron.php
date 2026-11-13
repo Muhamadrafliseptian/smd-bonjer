@@ -166,7 +166,7 @@ render_layout_start('Sinkronisasi ke Spreadsheet — ' . APP_NAME, 'sinkron');
         <div class="empty-state">
             <h3>Belum ada data kuesioner</h3>
             <p>Input data kuesioner terlebih dahulu sebelum melakukan sinkronisasi.</p>
-            <a class="btn btn-primary" href="form.php">+ Isi Kuesioner</a>
+            <a class="btn btn-primary" href="index.php">+ Isi Kuesioner</a>
         </div>
     <?php else: ?>
         <div class="table-responsive" style="max-height: 360px; overflow-y: auto;">
