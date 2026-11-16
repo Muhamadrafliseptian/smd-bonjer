@@ -53,13 +53,18 @@ $selectedRisk  = $_GET['risiko'] ?? '';
         </select>
 
         <!-- Filter Kondisi / Risiko Kesehatan (PERBAIKAN TYPO PADA VALUE) -->
-        <select name="risiko" class="form-control" style="width: auto; padding: 6px 10px; font-size: 13px;" onchange="document.getElementById('filterForm'].submit()">
+        <select name="risiko" class="form-control" style="width: auto; padding: 6px 10px; font-size: 13px;" onchange="document.getElementById('filterForm').submit()">
             <option value="">— Kondisi / Riwayat Penyakit —</option>
             <option value="hipertensi_Ya" <?= $selectedRisk === 'hipertensi_Ya' ? 'selected' : ''; ?>>Riwayat Hipertensi (Ya)</option>
             <option value="diabetes_Ya" <?= $selectedRisk === 'diabetes_Ya' ? 'selected' : ''; ?>>Riwayat Diabetes (Ya)</option>
             <option value="hamil_Ya" <?= $selectedRisk === 'hamil_Ya' ? 'selected' : ''; ?>>Pernah / Sedang Hamil (Ya)</option>
             <option value="merokok_Ya" <?= $selectedRisk === 'merokok_Ya' ? 'selected' : ''; ?>>Kebiasaan Merokok (Ya)</option>
         </select>
+
+        <a class="btn-xs btn-primary" style="margin-left:auto; padding: 6px 12px; text-decoration: none; border-radius: 6px;"
+           href="<?= esc(build_url('export.php', ['search' => $search, 'status' => $status, 'kelurahan' => $selectedKel, 'risiko' => $selectedRisk])); ?>">
+            Unduh Excel<?= ($search !== '' || $status !== '' || $selectedKel !== '' || $selectedRisk !== '') ? ' (sesuai filter)' : ' (semua data)'; ?>
+        </a>
 
         <?php if ($search !== '' || $status !== '' || $selectedKel !== '' || $selectedRisk !== ''): ?>
             <a href="dashboard.php" class="btn-xs" style="padding: 6px 12px; color: #dc2626; border-color: #fca5a5; text-decoration: none; border-radius: 6px; border: 1px solid #fca5a5;">Reset Filter</a>
