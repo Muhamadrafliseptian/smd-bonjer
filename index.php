@@ -17,6 +17,7 @@ $isAdmin = isset($_SESSION['admin_logged_in']) && $_SESSION['admin_logged_in'] =
 $self = basename($_SERVER['SCRIPT_NAME'] ?? 'index.php'); // form ini bisa dinamai index.php atau form.php
 
 $err = '';
+$salah = [];
 $saved = false;
 $savedNew = true;
 $kurang = [];
@@ -68,6 +69,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
     $status = $kurang ? 'draft' : 'valid';
 
+    // RT / RW: angka 1–999. Usia: angka 0–120.
+    $salah = [];
+    foreach (['rt' => 'RT', 'rw' => 'RW'] as $f => $lbl) {
+        if (isset($clean[$f]) && !(is_string($clean[$f]) && preg_match('/^\d{1,3}$/', $clean[$f]) && (int)$clean[$f] > 0)) {
+            $salah[] = $lbl . ' diisi angka saja, contoh: 01';
+        }
+    }
+    if (isset($clean['usia']) && !(is_string($clean['usia']) && preg_match('/^\d{1,3}$/', $clean['usia']) && (int)$clean['usia'] <= 120)) {
+        $salah[] = 'usia diisi angka antara 0 dan 120';
+    }
+
     $record = [
         'id' => $id,
         'waktu' => $now,
@@ -92,7 +104,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if (!$found) {
         $out[] = $record;
     }
-    $saveResult = db_save(['surveys' => $out]);
+    $saveResult = $salah ? false : db_save(['surveys' => $out]);
     // Jangan hanya percaya nilai kembalian db_save(): cek langsung apakah data sudah ada di database.
     $ok = false;
     if ($saveResult !== false) {
@@ -112,7 +124,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         log_aksi("Simpan kuesioner ID=$id dari " . ($_SERVER['REMOTE_ADDR'] ?? 'unknown'));
     } else {
         $err = 'Jawaban belum bisa disimpan. Coba tekan Simpan jawaban sekali lagi. Jika tetap gagal, hubungi petugas.';
-        if ($isAdmin) {
+        if ($salah) {
+            $err = 'Jawaban belum disimpan. Periksa isian ini: ' . implode('; ', $salah) . '.';
+        } elseif ($isAdmin) {
             $err .= ' (Catatan admin: periksa apakah folder data/ dan file kuesioner.json bisa ditulis oleh server.)';
         }
     }
@@ -368,7 +382,7 @@ textarea.ctl{min-height:5.5em;resize:vertical;line-height:1.4}
                 <div class="segs" id="segs"></div>
             </div>
 
-            <form method="post" action="<?php echo smd_h($self); ?>" id="form_kuesioner" novalidate data-start="<?php echo $err !== '' ? 'last' : '0'; ?>">
+            <form method="post" action="<?php echo smd_h($self); ?>" id="form_kuesioner" novalidate data-start="<?php echo ($err !== '' && !$salah) ? 'last' : '0'; ?>">
                 <input type="hidden" name="aksi" value="simpan">
                 <?php if ($formId !== ''): ?>
                     <input type="hidden" name="id" value="<?php echo smd_h($formId); ?>">
@@ -383,10 +397,10 @@ textarea.ctl{min-height:5.5em;resize:vertical;line-height:1.4}
                     <div class="full"><?php echo smd_q('Inisial responden', smd_input('inisial', 'text', 'Contoh: FI', 'maxlength="20" autocomplete="off"'), ['main' => false]); ?></div>
                     <div class="full"><?php echo smd_q('Alamat', smd_input('alamat', 'text', 'Nama jalan dan nomor rumah', 'maxlength="200" autocomplete="off"'), ['main' => false]); ?></div>
                     <?php
-                    echo smd_q('RT', smd_input('rt', 'text', 'Contoh: 01', 'maxlength="10" inputmode="numeric" autocomplete="off"'), ['main' => false]);
-                    echo smd_q('RW', smd_input('rw', 'text', 'Contoh: 01', 'maxlength="10" inputmode="numeric" autocomplete="off"'), ['main' => false]);
+                    echo smd_q('RT', smd_input('rt', 'text', 'Contoh: 01', 'maxlength="3" inputmode="numeric" pattern="[0-9]*" autocomplete="off" data-rule="rt"'), ['main' => false]);
+                    echo smd_q('RW', smd_input('rw', 'text', 'Contoh: 01', 'maxlength="3" inputmode="numeric" pattern="[0-9]*" autocomplete="off" data-rule="rw"'), ['main' => false]);
                     echo smd_q('Kelurahan', smd_select('kelurahan', ['Kebon Jeruk', 'Duri Kepa', 'Kedoya Selatan', 'Kedoya Utara', 'Sukabumi Selatan', 'Sukabumi Utara', 'Kelapa Dua']), ['main' => false]);
-                    echo smd_q('Usia (tahun)', smd_input('usia', 'number', 'Contoh: 35', 'min="0" max="120" inputmode="numeric"'), ['main' => false]);
+                    echo smd_q('Usia (tahun)', smd_input('usia', 'text', 'Contoh: 35', 'maxlength="3" inputmode="numeric" pattern="[0-9]*" autocomplete="off" data-rule="usia"'), ['main' => false]);
                     ?>
                     <div class="full"><?php echo smd_q('Jenis kelamin', smd_radio('jenis_kelamin', ['Laki-Laki', 'Perempuan']), ['main' => false]); ?></div>
                     <?php
@@ -708,6 +722,23 @@ textarea.ctl{min-height:5.5em;resize:vertical;line-height:1.4}
         });
     }
 
+    /* ---------- Aturan isian angka ---------- */
+    var RULE_MSG = {
+        rt: 'RT diisi angka saja, contoh: 01.',
+        rw: 'RW diisi angka saja, contoh: 01.',
+        usia: 'Usia diisi angka antara 0 dan 120.'
+    };
+    function ruleBroken(f) {
+        var rule = f.getAttribute('data-rule');
+        if (!rule || String(f.value).trim() === '') { return null; }
+        var v = String(f.value).trim();
+        if (!/^\d{1,3}$/.test(v)) { return RULE_MSG[rule]; }
+        var n = parseInt(v, 10);
+        if ((rule === 'usia' && n > 120) || (rule !== 'usia' && n < 1)) { return RULE_MSG[rule]; }
+        return null;
+    }
+    var DEFAULT_MSG = 'Pertanyaan ini harus dijawab.';
+
     /* ---------- Validasi isian wajib ---------- */
     function validate(i) {
         var bad = [];
@@ -715,7 +746,11 @@ textarea.ctl{min-height:5.5em;resize:vertical;line-height:1.4}
             q.classList.remove('err');
             Array.prototype.forEach.call(fields(q), function (f) { f.removeAttribute('aria-invalid'); });
             if (q.hasAttribute('data-opt') || !isEnabledQ(q)) { return; }
-            if (!hasAnswer(q)) {
+            var errEl = q.querySelector('.q-err');
+            var ruleF = q.querySelector('[data-rule]');
+            var ruleMsg = ruleF ? ruleBroken(ruleF) : null;
+            if (errEl) { errEl.textContent = ruleMsg || DEFAULT_MSG; }
+            if (!hasAnswer(q) || ruleMsg) {
                 q.classList.add('err');
                 var f = q.querySelector('input, select, textarea');
                 if (f) { f.setAttribute('aria-invalid', 'true'); }
@@ -783,10 +818,14 @@ textarea.ctl{min-height:5.5em;resize:vertical;line-height:1.4}
         }
     });
 
-    // pesan merah hilang begitu isian mulai diketik
+    // pesan merah hilang begitu isian benar; kolom angka hanya menerima angka
     form.addEventListener('input', function (e) {
+        if (e.target.getAttribute && e.target.getAttribute('data-rule')) {
+            var clean = e.target.value.replace(/\D/g, '');
+            if (clean !== e.target.value) { e.target.value = clean; }
+        }
         var q = e.target.closest ? e.target.closest('.q') : null;
-        if (q && q.classList.contains('err') && hasAnswer(q)) {
+        if (q && q.classList.contains('err') && hasAnswer(q) && !(e.target.getAttribute && e.target.getAttribute('data-rule') && ruleBroken(e.target))) {
             q.classList.remove('err');
             Array.prototype.forEach.call(fields(q), function (f) { f.removeAttribute('aria-invalid'); });
         }
@@ -797,6 +836,13 @@ textarea.ctl{min-height:5.5em;resize:vertical;line-height:1.4}
         if (q) {
             q.classList.remove('err');
             Array.prototype.forEach.call(fields(q), function (f) { f.removeAttribute('aria-invalid'); });
+            var msg = ruleBroken(e.target);
+            if (msg) {
+                var errEl = q.querySelector('.q-err');
+                if (errEl) { errEl.textContent = msg; }
+                q.classList.add('err');
+                e.target.setAttribute('aria-invalid', 'true');
+            }
         }
         updateConds();
     });
