@@ -28,6 +28,7 @@ $wajibLabel = [
     'pendidikan' => 'pendidikan',
     'pekerjaan' => 'pekerjaan',
     'tgl_wawancara' => 'tanggal wawancara',
+    'pekerjaan_lain' => 'pekerjaan (lain-lain)',
 ];
 
 $D = [];       // nilai untuk mengisi ulang form
@@ -62,6 +63,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $kurang = array_values(array_filter($wajib, function ($f) use ($clean) {
         return !isset($clean[$f]) || $clean[$f] === '';
     }));
+    if (($clean['pekerjaan'] ?? '') === 'Lain-lain' && empty($clean['pekerjaan_lain'])) {
+        $kurang[] = 'pekerjaan_lain';
+    }
     $status = $kurang ? 'draft' : 'valid';
 
     $record = [
@@ -174,14 +178,14 @@ function smd_input($name, $type, $ph, $extra = '')
 }
 /**
  * Satu pertanyaan.
- * opt: main (bernomor, default true), req (wajib), hint, optional (tidak dihitung "belum dijawab").
+ * opt: main (bernomor, default true), hint, optional (boleh dikosongkan). Selain yang optional, semua pertanyaan wajib dijawab.
  */
 function smd_q($label, $control, $opt = [])
 {
     static $n = 0, $k = 0;
     $k++;
     $main = $opt['main'] ?? true;
-    $req = !empty($opt['req']);
+    $req = empty($opt['optional']);
     $hint = $opt['hint'] ?? '';
     $lid = 'l' . $k;
 
@@ -194,7 +198,7 @@ function smd_q($label, $control, $opt = [])
         $n++;
         $num = '<span class="qn">' . $n . '.</span>';
     }
-    $text = '<span>' . $label . ($req ? '<span class="req">(wajib)</span>' : '') . '</span>';
+    $text = '<span>' . $label . ($req ? '' : '<span class="req">(boleh dikosongkan)</span>') . '</span>';
 
     if (strpos($control, 'type="radio"') !== false) {
         $control = str_replace('class="opts"', 'class="opts" role="radiogroup" aria-labelledby="' . $lid . '"' . ($req ? ' aria-required="true"' : ''), $control);
@@ -206,11 +210,11 @@ function smd_q($label, $control, $opt = [])
         $lab = '<label class="q-label" id="' . $lid . '" for="f_' . smd_h($name) . '">' . $num . $text . '</label>';
     }
 
-    return '<div class="q' . ($main ? ' main' : '') . '"' . ($req ? ' data-req="1"' : '') . (!empty($opt['optional']) ? ' data-opt="1"' : '') . '>'
+    return '<div class="q' . ($main ? ' main' : '') . '"' . ($req ? '' : ' data-opt="1"') . '>'
         . $lab
         . ($hint !== '' ? '<div class="q-hint">' . $hint . '</div>' : '')
         . $control
-        . '<p class="q-err">Wajib diisi.</p></div>';
+        . '<p class="q-err">Pertanyaan ini harus dijawab.</p></div>';
 }
 /** Blok pertanyaan lanjutan: muncul bila field $name bernilai salah satu dari $vals (dipisah |). */
 function smd_cond_open($name, $vals)
@@ -303,7 +307,9 @@ textarea.ctl{min-height:5.5em;resize:vertical;line-height:1.4}
 .cond-box{margin:0 0 1.5em .6em;padding:.2em 0 0 1.1em;border-left:3px solid #9aa6b5}
 .cond-box>.q:last-child{margin-bottom:0}
 
-.review{margin:1.5em 0 0;padding:.8em 1em;border-left:5px solid var(--ac);background:var(--ac-bg)}
+.grid+.cond.open{margin-top:.6em}
+.grid+.cond.open .cond-box{margin-bottom:0}
+.after-cond{margin-top:1.3em}
 
 .smd-nav{position:sticky;bottom:0;z-index:30;display:flex;flex-wrap:wrap;gap:.6em;margin:1.8em -1.4em 0;padding:.8em 1.4em;background:#fff;border-top:1px solid var(--rule);border-radius:0 0 6px 6px}
 .smd-btn{display:inline-flex;align-items:center;justify-content:center;min-height:3em;padding:.5em 1em;border:2px solid var(--ac);border-radius:6px;background:var(--ac);color:#fff;font:inherit;font-weight:700;text-align:center;text-decoration:none;cursor:pointer}
@@ -371,23 +377,30 @@ textarea.ctl{min-height:5.5em;resize:vertical;line-height:1.4}
 
                 <?php
                 /* ================= Bagian 1 ================= */
-                echo smd_section('Tentang Anda', 'Isian yang bertanda (wajib) harus diisi. Yang lain boleh dikosongkan kalau Anda tidak tahu.');
+                echo smd_section('Tentang Anda', 'Semua pertanyaan harus dijawab. Hanya kolom kritik dan saran di bagian terakhir yang boleh dikosongkan.');
                 ?>
                 <div class="grid">
-                    <div class="full"><?php echo smd_q('Inisial responden', smd_input('inisial', 'text', 'Contoh: FI', 'maxlength="20" autocomplete="off"'), ['main' => false, 'req' => true]); ?></div>
-                    <div class="full"><?php echo smd_q('Alamat', smd_input('alamat', 'text', 'Nama jalan dan nomor rumah', 'maxlength="200" autocomplete="off"'), ['main' => false, 'req' => true]); ?></div>
+                    <div class="full"><?php echo smd_q('Inisial responden', smd_input('inisial', 'text', 'Contoh: FI', 'maxlength="20" autocomplete="off"'), ['main' => false]); ?></div>
+                    <div class="full"><?php echo smd_q('Alamat', smd_input('alamat', 'text', 'Nama jalan dan nomor rumah', 'maxlength="200" autocomplete="off"'), ['main' => false]); ?></div>
                     <?php
                     echo smd_q('RT', smd_input('rt', 'text', 'Contoh: 01', 'maxlength="10" inputmode="numeric" autocomplete="off"'), ['main' => false]);
                     echo smd_q('RW', smd_input('rw', 'text', 'Contoh: 01', 'maxlength="10" inputmode="numeric" autocomplete="off"'), ['main' => false]);
                     echo smd_q('Kelurahan', smd_select('kelurahan', ['Kebon Jeruk', 'Duri Kepa', 'Kedoya Selatan', 'Kedoya Utara', 'Sukabumi Selatan', 'Sukabumi Utara', 'Kelapa Dua']), ['main' => false]);
                     echo smd_q('Usia (tahun)', smd_input('usia', 'number', 'Contoh: 35', 'min="0" max="120" inputmode="numeric"'), ['main' => false]);
                     ?>
-                    <div class="full"><?php echo smd_q('Jenis kelamin', smd_radio('jenis_kelamin', ['Laki-Laki', 'Perempuan']), ['main' => false, 'req' => true]); ?></div>
+                    <div class="full"><?php echo smd_q('Jenis kelamin', smd_radio('jenis_kelamin', ['Laki-Laki', 'Perempuan']), ['main' => false]); ?></div>
                     <?php
-                    echo smd_q('Pendidikan terakhir', smd_select('pendidikan', ['Tidak Sekolah', 'SD', 'SMP', 'SMA', 'DIII', 'S1', 'S2', 'S3']), ['main' => false, 'req' => true]);
-                    echo smd_q('Pekerjaan', smd_select('pekerjaan', ['Pelajar', 'ASN–PNS–P3K', 'Polisi–TNI', 'Karyawan swasta', 'Wiraswasta', 'Ibu rumah tangga', 'Lain-lain']), ['main' => false, 'req' => true]);
+                    echo '<div class="full">' . smd_q('Pendidikan terakhir', smd_select('pendidikan', ['Tidak Sekolah', 'SD', 'SMP', 'SMA', 'DIII', 'S1', 'S2', 'S3']), ['main' => false]) . '</div>';
+                    echo '<div class="full">' . smd_q('Pekerjaan', smd_select('pekerjaan', ['Pelajar', 'ASN–PNS–P3K', 'Polisi–TNI', 'Karyawan swasta', 'Wiraswasta', 'Ibu rumah tangga', 'Lain-lain']), ['main' => false]) . '</div>';
                     ?>
-                    <div class="full"><?php echo smd_q('Tanggal wawancara', smd_input('tgl_wawancara', 'date', ''), ['main' => false, 'req' => true, 'hint' => 'Sudah terisi tanggal hari ini. Ubah jika berbeda.']); ?></div>
+                </div>
+                <?php
+                echo smd_cond_open('pekerjaan', 'Lain-lain');
+                echo smd_q('Sebutkan pekerjaan Anda', smd_input('pekerjaan_lain', 'text', 'Tulis pekerjaan Anda', 'maxlength="100" autocomplete="off"'), ['main' => false]);
+                echo smd_cond_close();
+                ?>
+                <div class="after-cond">
+                    <?php echo smd_q('Tanggal wawancara', smd_input('tgl_wawancara', 'date', ''), ['main' => false, 'hint' => 'Sudah terisi tanggal hari ini. Ubah jika berbeda.']); ?>
                 </div>
                 <?php
                 echo smd_section_end();
@@ -426,7 +439,7 @@ textarea.ctl{min-height:5.5em;resize:vertical;line-height:1.4}
                 echo smd_section_end();
 
                 /* ================= Bagian 3 ================= */
-                echo smd_section('Kesehatan anak usia 0–59 bulan');
+                echo smd_section('Riwayat Kesehatan anak usia 0–59 bulan');
 
                 echo smd_q('Apakah anak Anda mendapatkan imunisasi lengkap (IDL) saat usia 0–24 bulan?', smd_radio('idl', $YT));
                 echo smd_cond_open('idl', 'Tidak');
@@ -498,7 +511,7 @@ textarea.ctl{min-height:5.5em;resize:vertical;line-height:1.4}
                 echo smd_cond_close();
                 echo smd_cond_close();
 
-                echo smd_q('Apakah Anda memiliki kebiasaan merokok?', smd_radio('merokok', $YT));
+                echo smd_q('Apakah Anda / Keluarga Anda memiliki kebiasaan merokok?', smd_radio('merokok', $YT));
                 echo smd_cond_open('merokok', 'Ya');
                 echo smd_q('Di mana aktivitas merokok dilakukan?', smd_radio('tempat_smoke', ['Dalam rumah', 'Luar rumah', 'Dalam & luar rumah']), ['main' => false]);
                 echo smd_cond_close();
@@ -588,12 +601,10 @@ textarea.ctl{min-height:5.5em;resize:vertical;line-height:1.4}
                 echo smd_cond_close();
                 echo smd_cond_close();
 
-                echo smd_q('Sebutkan masalah kesehatan lain yang ditemukan di sekitar tempat tinggal Anda, serta kritik dan saran untuk layanan Puskesmas Kebon Jeruk.', smd_area('saran', 'Boleh dikosongkan'), ['optional' => true]);
+                echo smd_q('Sebutkan masalah kesehatan lain yang ditemukan di sekitar tempat tinggal Anda, serta kritik dan saran untuk layanan Puskesmas Kebon Jeruk.', smd_area('saran', 'Tulis di sini'), ['optional' => true]);
 
                 echo smd_section_end();
                 ?>
-
-                <p class="review" id="review" role="status" hidden></p>
 
                 <div class="smd-nav">
                     <button class="smd-btn ghost" type="button" id="btnPrev" hidden>Kembali</button>
@@ -641,7 +652,6 @@ textarea.ctl{min-height:5.5em;resize:vertical;line-height:1.4}
     var infoTxt = document.getElementById('stepTxt');
     var segsBox = document.getElementById('segs');
     var stepErr = document.getElementById('stepErr');
-    var review = document.getElementById('review');
     var prev = document.getElementById('btnPrev');
     var next = document.getElementById('btnNext');
     var submit = document.getElementById('btnSubmit');
@@ -701,9 +711,10 @@ textarea.ctl{min-height:5.5em;resize:vertical;line-height:1.4}
     /* ---------- Validasi isian wajib ---------- */
     function validate(i) {
         var bad = [];
-        Array.prototype.forEach.call(secs[i].querySelectorAll('.q[data-req]'), function (q) {
+        Array.prototype.forEach.call(secs[i].querySelectorAll('.q'), function (q) {
             q.classList.remove('err');
             Array.prototype.forEach.call(fields(q), function (f) { f.removeAttribute('aria-invalid'); });
+            if (q.hasAttribute('data-opt') || !isEnabledQ(q)) { return; }
             if (!hasAnswer(q)) {
                 q.classList.add('err');
                 var f = q.querySelector('input, select, textarea');
@@ -715,24 +726,13 @@ textarea.ctl{min-height:5.5em;resize:vertical;line-height:1.4}
     }
     function showErr(bad) {
         stepErr.textContent = bad.length === 1
-            ? 'Ada 1 isian wajib yang belum diisi. Lengkapi dulu, lalu lanjut.'
-            : 'Ada ' + bad.length + ' isian wajib yang belum diisi. Lengkapi dulu, lalu lanjut.';
+            ? 'Ada 1 pertanyaan di bagian ini yang belum dijawab. Lengkapi dulu.'
+            : 'Ada ' + bad.length + ' pertanyaan di bagian ini yang belum dijawab. Lengkapi dulu.';
         stepErr.hidden = false;
         var first = bad[0];
         first.scrollIntoView({ block: 'center' });
         var f = first.querySelector('input, select, textarea');
         if (f) { f.focus({ preventScroll: true }); }
-    }
-
-    /* ---------- Ringkasan di bagian terakhir ---------- */
-    function updateReview() {
-        var open = 0;
-        Array.prototype.forEach.call(form.querySelectorAll('.q'), function (q) {
-            if (isEnabledQ(q) && !q.hasAttribute('data-opt') && !hasAnswer(q)) { open++; }
-        });
-        review.textContent = open === 0
-            ? 'Semua pertanyaan sudah dijawab. Periksa kembali jika perlu, lalu simpan.'
-            : 'Pertanyaan yang belum dijawab: ' + open + '. Tidak semua pertanyaan berlaku untuk setiap orang, jadi Anda boleh langsung menyimpan.';
     }
 
     /* ---------- Pindah bagian ---------- */
@@ -745,8 +745,6 @@ textarea.ctl{min-height:5.5em;resize:vertical;line-height:1.4}
         prev.hidden = i === 0;
         next.hidden = i === total - 1;
         submit.hidden = i !== total - 1;
-        review.hidden = i !== total - 1;
-        if (i === total - 1) { updateReview(); }
         stepErr.hidden = true;
         if (scroll) {
             window.scrollTo(0, Math.max(0, root.getBoundingClientRect().top + window.pageYOffset - 8));
@@ -778,11 +776,19 @@ textarea.ctl{min-height:5.5em;resize:vertical;line-height:1.4}
         }
     });
 
-    // Enter tidak mengirim form secara tidak sengaja
     form.addEventListener('keydown', function (e) {
         if (e.key === 'Enter' && e.target.tagName === 'INPUT') {
             e.preventDefault();
             if (cur < total - 1) { next.click(); }
+        }
+    });
+
+    // pesan merah hilang begitu isian mulai diketik
+    form.addEventListener('input', function (e) {
+        var q = e.target.closest ? e.target.closest('.q') : null;
+        if (q && q.classList.contains('err') && hasAnswer(q)) {
+            q.classList.remove('err');
+            Array.prototype.forEach.call(fields(q), function (f) { f.removeAttribute('aria-invalid'); });
         }
     });
 
