@@ -35,6 +35,7 @@ $IDENTITAS_FIELDS = [
     'jenis_kelamin' => 'Jenis Kelamin',
     'pendidikan'    => 'Pendidikan Terakhir',
     'pekerjaan'     => 'Pekerjaan',
+    'pekerjaan_lain' => 'Pekerjaan (Lain-lain)',
     'tgl_wawancara' => 'Tanggal Wawancara',
     'kelurahan'     => 'Kelurahan',
     'alamat'        => 'Alamat Lengkap',
@@ -74,12 +75,15 @@ $SECTIONS = [
         'masker'          => ['Memakai masker saat batuk / gejala ISPA', false],
         'masker_alas'     => ['Alasan jarang / tidak memakai masker', true],
         'hipertensi'      => ['Pernah / sedang menderita hipertensi?', false],
+        'hipertensi_siapa' => ['Penderita hipertensi', true],
         'ht_rutin'        => ['Berobat hipertensi rutin?', true],
         'hipertensi_alas' => ['Alasan tidak berobat rutin (hipertensi)', true],
         'diabetes'        => ['Pernah / sedang menderita diabetes melitus?', false],
+        'diabetes_siapa'  => ['Penderita diabetes melitus', true],
         'dm_rutin'        => ['Berobat diabetes rutin?', true],
         'diabetes_alas'   => ['Alasan tidak berobat rutin (diabetes)', true],
         'kejiwaan'        => ['Pernah / sedang mengalami masalah kejiwaan?', false],
+        'kejiwaan_siapa'  => ['Penderita masalah kejiwaan', true],
         'jiwa_rutin'      => ['Berobat kejiwaan rutin?', true],
         'kejiwaan_alas'   => ['Alasan tidak berobat rutin (kejiwaan)', true],
         'merokok'         => ['Memiliki kebiasaan merokok?', false],
@@ -258,6 +262,7 @@ render_layout_start('Detail Kuesioner — ' . APP_NAME, 'dashboard');
 
             <div class="detail-actions">
                 <a class="btn btn-outline" href="dashboard.php">Kembali</a>
+                <a class="btn btn-outline" href="index.php?edit_id=<?= urlencode($record['id']); ?>">Edit</a>
                 <a class="btn btn-primary" href="export.php?id=<?= urlencode($record['id']); ?>">Export</a>
             </div>
         </div>
@@ -271,6 +276,9 @@ render_layout_start('Detail Kuesioner — ' . APP_NAME, 'dashboard');
             <div class="profile-grid">
                 <?php foreach ($IDENTITAS_FIELDS as $key => $label):
                     $val = $key === 'alamat' ? $alamatFull : format_val($key, $d[$key] ?? '');
+                    if ($key === 'pekerjaan_lain' && $val === '') {
+                        continue;
+                    }
                     if ($key === 'usia' && $val !== '') {
                         $val .= ' tahun';
                     }

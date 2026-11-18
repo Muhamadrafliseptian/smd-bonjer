@@ -503,6 +503,7 @@ textarea.ctl{min-height:5.5em;resize:vertical;line-height:1.4}
 
                 echo smd_q('Apakah Anda atau keluarga pernah / saat ini didiagnosis menderita hipertensi (darah tinggi)?', smd_radio('hipertensi', $YT));
                 echo smd_cond_open('hipertensi', 'Ya');
+                echo smd_q('Siapa yang menderita hipertensi?', smd_input('hipertensi_siapa', 'text', 'Contoh: Ayah, Ibu, atau Saya sendiri', 'maxlength="100" autocomplete="off"'), ['main' => false]);
                 echo smd_q('Apakah Anda menjalani pengobatan secara rutin di Puskesmas / RS / Klinik / Praktik Dokter Mandiri?', smd_radio('ht_rutin', $YT), ['main' => false]);
                 echo smd_cond_open('ht_rutin', 'Tidak');
                 echo smd_q('Sebutkan alasannya', smd_area('hipertensi_alas', $ALASAN), ['main' => false]);
@@ -511,6 +512,7 @@ textarea.ctl{min-height:5.5em;resize:vertical;line-height:1.4}
 
                 echo smd_q('Apakah Anda atau keluarga pernah / saat ini didiagnosis menderita diabetes melitus (kencing manis)?', smd_radio('diabetes', $YT));
                 echo smd_cond_open('diabetes', 'Ya');
+                echo smd_q('Siapa yang menderita Diabetes Mellitus?', smd_input('diabetes_siapa', 'text', 'Contoh: Ayah, Ibu, atau Saya sendiri', 'maxlength="100" autocomplete="off"'), ['main' => false]);
                 echo smd_q('Apakah Anda menjalani pengobatan secara rutin di Puskesmas / RS / Klinik / Praktik Dokter Mandiri?', smd_radio('dm_rutin', $YT), ['main' => false]);
                 echo smd_cond_open('dm_rutin', 'Tidak');
                 echo smd_q('Sebutkan alasannya', smd_area('diabetes_alas', $ALASAN), ['main' => false]);
@@ -519,6 +521,7 @@ textarea.ctl{min-height:5.5em;resize:vertical;line-height:1.4}
 
                 echo smd_q('Apakah Anda atau keluarga pernah / saat ini didiagnosis menderita masalah kejiwaan?', smd_radio('kejiwaan', $YT));
                 echo smd_cond_open('kejiwaan', 'Ya');
+                echo smd_q('Siapa yang menderita masalah kejiwaan?', smd_input('kejiwaan_siapa', 'text', 'Contoh: Ayah, Ibu, atau Saya sendiri', 'maxlength="100" autocomplete="off"'), ['main' => false]);
                 echo smd_q('Apakah Anda menjalani pengobatan secara rutin di Puskesmas / RS?', smd_radio('jiwa_rutin', $YT), ['main' => false]);
                 echo smd_cond_open('jiwa_rutin', 'Tidak');
                 echo smd_q('Sebutkan alasannya', smd_area('kejiwaan_alas', $ALASAN), ['main' => false]);
