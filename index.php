@@ -470,7 +470,7 @@ textarea.ctl{min-height:5.5em;resize:vertical;line-height:1.4}
                 echo smd_q('Sebutkan alasannya', smd_area('pantau_alas', $ALASAN), ['main' => false]);
                 echo smd_cond_close();
 
-                echo smd_q('Apakah Anda atau keluarga Anda sudah mendapatkan imunisasi MR / Dt / Td saat usia sekolah dasar?', smd_radio('imunisasi_sekolah', $SB));
+                echo smd_q('Apakah anak Anda sudah mendapaatkan imunisasi MR/ Dt/ Td saat usia sekolah dasar?', smd_radio('imunisasi_sekolah', $SB));
                 echo smd_cond_open('imunisasi_sekolah', 'Belum');
                 echo smd_q('Sebutkan alasannya', smd_area('imunisasi_alas', $ALASAN), ['main' => false]);
                 echo smd_cond_close();
@@ -482,18 +482,16 @@ textarea.ctl{min-height:5.5em;resize:vertical;line-height:1.4}
 
                 echo smd_q('Apakah saat ini Anda atau pasangan Anda termasuk kategori usia subur (20–45 tahun)?', smd_radio('usia_subur', $YT));
                 echo smd_cond_open('usia_subur', 'Ya');
-                echo smd_q('Apakah Anda sudah menggunakan alat kontrasepsi?', smd_radio('kontrasepsi', $YT), ['main' => false, 'hint' => 'Misalnya pil KB, suntik, implan, kondom, IUD, atau KB alami.']);
+                echo smd_q('Apakah Anda sudah menggunakan alat kontrasepsi?', smd_radio('kontrasepsi', $YT), ['main' => false, 'hint' => 'Misalnya pil KB, suntik, implan, kondom, IUD, Steril (MOW atau MOP),  atau KB alami']);
                 echo smd_cond_open('kontrasepsi', 'Tidak');
                 echo smd_q('Sebutkan alasannya', smd_area('subur_alas', $ALASAN), ['main' => false]);
                 echo smd_cond_close();
                 echo smd_cond_close();
 
-                echo smd_q('Apakah Anda pernah didiagnosis menderita penyakit TB (Tuberkulosis)?', smd_radio('diagnosa_tb', $YT));
+                echo smd_q('Apakah Anda atau Keluarga Anda pernah didiagnosis menderita penyakit TB (Tuberkulosis)?', smd_radio('diagnosa_tb', $YT));
                 echo smd_cond_open('diagnosa_tb', 'Ya');
-                echo smd_q('Apakah Anda menjalani pengobatan TB secara rutin di Puskesmas / Klinik / RS?', smd_radio('tb_rutin', $YT), ['main' => false]);
-                echo smd_cond_open('tb_rutin', 'Tidak');
-                echo smd_q('Sebutkan alasannya', smd_area('tb_alas', $ALASAN), ['main' => false]);
-                echo smd_cond_close();
+                echo smd_q('Siapa yang menderita TB (Tuberkulosis)?', smd_input('tb_siapa', 'text', 'Contoh: Ayah, Ibu, atau Saya sendiri', 'maxlength="100" autocomplete="off"'), ['main' => false]);
+                echo smd_q('Apakah Anda menjalani pengobatan TB secara rutin di Puskesmas / Klinik / RS?', smd_area('tb_rutin', 'Contoh: Saya sendiri: Rutin, Istri: Tidak rutin'), ['main' => false, 'hint' => 'Tuliskan anggota keluarga yang menderita TB beserta status pengobatannya (rutin/tidak rutin).<br>Contoh: Saya sendiri: Rutin, Istri: Tidak rutin']);
                 echo smd_cond_close();
 
                 echo smd_q('Apakah Anda menggunakan masker saat batuk atau mengalami gejala infeksi saluran pernapasan, terutama di dekat orang lain?', smd_radio('masker', ['Selalu', 'Sering', 'Kadang-kadang', 'Tidak pernah']));
@@ -504,28 +502,19 @@ textarea.ctl{min-height:5.5em;resize:vertical;line-height:1.4}
                 echo smd_q('Apakah Anda atau keluarga pernah / saat ini didiagnosis menderita hipertensi (darah tinggi)?', smd_radio('hipertensi', $YT));
                 echo smd_cond_open('hipertensi', 'Ya');
                 echo smd_q('Siapa yang menderita hipertensi?', smd_input('hipertensi_siapa', 'text', 'Contoh: Ayah, Ibu, atau Saya sendiri', 'maxlength="100" autocomplete="off"'), ['main' => false]);
-                echo smd_q('Apakah Anda menjalani pengobatan secara rutin di Puskesmas / RS / Klinik / Praktik Dokter Mandiri?', smd_radio('ht_rutin', $YT), ['main' => false]);
-                echo smd_cond_open('ht_rutin', 'Tidak');
-                echo smd_q('Sebutkan alasannya', smd_area('hipertensi_alas', $ALASAN), ['main' => false]);
-                echo smd_cond_close();
+                echo smd_q('Apakah Anda menjalani pengobatan secara rutin di Puskesmas / RS / Klinik / Praktik Dokter Mandiri?', smd_area('ht_rutin', 'Contoh: Saya sendiri: Rutin, Istri: Tidak rutin'), ['main' => false, 'hint' => 'Tuliskan anggota keluarga yang menderita hipertensi beserta status pengobatannya (rutin/tidak rutin).<br>Contoh: Saya sendiri: Rutin, Istri: Tidak rutin']);
                 echo smd_cond_close();
 
                 echo smd_q('Apakah Anda atau keluarga pernah / saat ini didiagnosis menderita diabetes melitus (kencing manis)?', smd_radio('diabetes', $YT));
                 echo smd_cond_open('diabetes', 'Ya');
                 echo smd_q('Siapa yang menderita Diabetes Mellitus?', smd_input('diabetes_siapa', 'text', 'Contoh: Ayah, Ibu, atau Saya sendiri', 'maxlength="100" autocomplete="off"'), ['main' => false]);
-                echo smd_q('Apakah Anda menjalani pengobatan secara rutin di Puskesmas / RS / Klinik / Praktik Dokter Mandiri?', smd_radio('dm_rutin', $YT), ['main' => false]);
-                echo smd_cond_open('dm_rutin', 'Tidak');
-                echo smd_q('Sebutkan alasannya', smd_area('diabetes_alas', $ALASAN), ['main' => false]);
-                echo smd_cond_close();
+                echo smd_q('Apakah Anda menjalani pengobatan secara rutin di Puskesmas / RS / Klinik / Praktik Dokter Mandiri?', smd_area('dm_rutin', 'Contoh: Saya sendiri: Rutin, Istri: Tidak rutin'), ['main' => false, 'hint' => 'Tuliskan anggota keluarga yang menderita diabetes melitus beserta status pengobatannya (rutin/tidak rutin).<br>Contoh: Saya sendiri: Rutin, Istri: Tidak rutin']);
                 echo smd_cond_close();
 
                 echo smd_q('Apakah Anda atau keluarga pernah / saat ini didiagnosis menderita masalah kejiwaan?', smd_radio('kejiwaan', $YT));
                 echo smd_cond_open('kejiwaan', 'Ya');
                 echo smd_q('Siapa yang menderita masalah kejiwaan?', smd_input('kejiwaan_siapa', 'text', 'Contoh: Ayah, Ibu, atau Saya sendiri', 'maxlength="100" autocomplete="off"'), ['main' => false]);
-                echo smd_q('Apakah Anda menjalani pengobatan secara rutin di Puskesmas / RS?', smd_radio('jiwa_rutin', $YT), ['main' => false]);
-                echo smd_cond_open('jiwa_rutin', 'Tidak');
-                echo smd_q('Sebutkan alasannya', smd_area('kejiwaan_alas', $ALASAN), ['main' => false]);
-                echo smd_cond_close();
+                echo smd_q('Apakah Anda menjalani pengobatan secara rutin di Puskesmas / RS?', smd_area('jiwa_rutin', 'Contoh: Saya sendiri: Rutin, Istri: Tidak rutin'), ['main' => false, 'hint' => 'Tuliskan anggota keluarga yang menderita masalah kejiwaan beserta status pengobatannya (rutin/tidak rutin).<br>Contoh: Saya sendiri: Rutin, Istri: Tidak rutin']);
                 echo smd_cond_close();
 
                 echo smd_q('Apakah Anda / Keluarga Anda memiliki kebiasaan merokok?', smd_radio('merokok', $YT));
