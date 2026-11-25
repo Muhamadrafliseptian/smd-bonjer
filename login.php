@@ -17,11 +17,18 @@ $errorMsg = '';
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $user           = trim($_POST['user'] ?? '');
     $password       = $_POST['password'] ?? '';
-    $inputCaptcha   = strtoupper(trim($_POST['captcha'] ?? ''));
-    $sessionCaptcha = $_SESSION['captcha_code'] ?? '';
 
-    // Validasi CAPTCHA terlebih dahulu
-    if (empty($inputCaptcha) || $inputCaptcha !== $sessionCaptcha) {
+    // Validasi CAPTCHA terlebih dahulu (kode dibuat captcha.php, disimpan di $_SESSION['smd_captcha'])
+    $captchaData = $_SESSION['smd_captcha'] ?? null;
+    unset($_SESSION['smd_captcha']); // sekali pakai, benar atau salah
+    $inputCaptcha = strtoupper(preg_replace('/\s+/', '', (string)($_POST['captcha'] ?? '')));
+    $captchaOk = is_array($captchaData)
+        && !empty($captchaData['code'])
+        && (time() - (int)($captchaData['time'] ?? 0)) <= 7200
+        && $inputCaptcha !== ''
+        && hash_equals((string)$captchaData['code'], $inputCaptcha);
+
+    if (!$captchaOk) {
         $errorMsg = 'Kode verifikasi (CAPTCHA) salah atau kedaluwarsa.';
     } elseif ($user === ADMIN_USER && $password === ADMIN_PASS) {
         // Regenerasi session ID untuk keamanan
@@ -35,9 +42,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     } else {
         $errorMsg = 'Nama pengguna atau kata sandi tidak valid.';
     }
-
-    // Hapus kode captcha lama setelah digunakan
-    unset($_SESSION['captcha_code']);
 }
 ?>
 <!DOCTYPE html>
@@ -135,14 +139,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
         .captcha-img-box img {
             display: block;
-            height: 42px;
+            height: 50px;
+            width: auto;
         }
         .btn-refresh {
             background: #fff;
             border: 1px solid var(--border);
             border-radius: 6px;
             padding: 0 10px;
-            height: 42px;
+            height: 50px;
             font-size: 13px;
             font-weight: 600;
             color: var(--text-muted);
