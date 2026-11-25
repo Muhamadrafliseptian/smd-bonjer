@@ -120,6 +120,7 @@ render_layout_start('Dashboard — ' . APP_NAME, 'dashboard');
 <?php endif; ?>
 
 <?php require __DIR__ . '/components/dashboard/stats.php'; ?>
+<?php require __DIR__ . '/components/dashboard/charts.php'; ?>
 
 <div class="data-card">
     <?php require __DIR__ . '/components/dashboard/filter_bar.php'; ?>
