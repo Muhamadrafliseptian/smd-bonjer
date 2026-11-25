@@ -1,52 +1,70 @@
 <?php
 /**
- * captcha.php — Menghasilkan gambar verifikasi (CAPTCHA) dinamis.
+ * captcha.php — Membuat gambar kode pengaman (PNG) untuk form.php.
+ * Kode disimpan di sesi ($_SESSION['smd_captcha']) dan dicek ulang di server saat form dikirim.
+ * Hanya butuh ekstensi PHP GD (tanpa file font).
  */
 session_start();
 
-// Buat string acak 5 karakter (huruf besar dan angka, hindari karakter mirip seperti 0, O, 1, I)
-$characters = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
-$captchaText = '';
-for ($i = 0; $i < 5; $i++) {
-    $captchaText .= $characters[random_int(0, strlen($characters) - 1)];
-}
-
-// Simpan teks asli ke session admin
-$_SESSION['captcha_code'] = $captchaText;
-
-// Buat gambar dengan GD Library
-$image = imagecreatetruecolor(130, 42);
-
-// Warna (Tema Teal & Abu-abu lembut)
-$bgColor = imagecolorallocate($image, 241, 245, 249);    // #f1f5f9 (bg-body)
-$textColor = imagecolorallocate($image, 15, 118, 110);   // #0f766e (primary)
-$lineColor = imagecolorallocate($image, 203, 213, 225);   // #cbd5e1 (border)
-$dotColor = imagecolorallocate($image, 148, 163, 184);    // #94a3b8
-
-// Beri background
-imagefilledrectangle($image, 0, 0, 130, 42, $bgColor);
-
-// Tambahkan garis gangguan acak agar tidak mudah dibaca OCR bot
-for ($i = 0; $i < 4; $i++) {
-    imageline($image, random_int(0, 130), random_int(0, 42), random_int(0, 130), random_int(0, 42), $lineColor);
-}
-
-// Tambahkan titik-titik gangguan
-for ($i = 0; $i < 40; $i++) {
-    imagesetpixel($image, random_int(0, 130), random_int(0, 42), $dotColor);
-}
-
-// Tulis karakter CAPTCHA (menggunakan font bawaan GD)
-$fontSize = 5;
-$x = 22;
-for ($i = 0; $i < strlen($captchaText); $i++) {
-    $y = random_int(8, 14);
-    imagestring($image, $fontSize, $x, $y, $captchaText[$i], $textColor);
-    $x += 20;
-}
-
-// Render output sebagai gambar PNG
 header('Content-Type: image/png');
 header('Cache-Control: no-store, no-cache, must-revalidate, max-age=0');
-imagepng($image);
-imagedestroy($image);
+header('Pragma: no-cache');
+header('X-Content-Type-Options: nosniff');
+
+if (!function_exists('imagecreatetruecolor')) {
+    http_response_code(500);
+    exit;
+}
+
+// Tanpa huruf/angka yang mirip: 0 O 1 I L
+$chars = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789';
+$len = 5;
+$code = '';
+for ($i = 0; $i < $len; $i++) {
+    $code .= $chars[random_int(0, strlen($chars) - 1)];
+}
+$_SESSION['smd_captcha'] = ['code' => $code, 'time' => time()];
+session_write_close();
+
+$W = 230;
+$H = 76;
+$img = imagecreatetruecolor($W, $H);
+$bg = imagecolorallocate($img, 244, 246, 249);
+imagefill($img, 0, 0, $bg);
+
+// Huruf: digambar kecil, diputar acak, lalu diperbesar agar bentuknya tidak seragam
+$cell = 40;
+$startX = (int)(($W - $cell * $len) / 2) + 2;
+for ($i = 0; $i < $len; $i++) {
+    $tmp = imagecreatetruecolor(16, 22);
+    $tbg = imagecolorallocate($tmp, 244, 246, 249);
+    imagefill($tmp, 0, 0, $tbg);
+    $ink = imagecolorallocate($tmp, random_int(10, 60), random_int(20, 70), random_int(60, 130));
+    imagestring($tmp, 5, 3, 3, $code[$i], $ink);
+    imagestring($tmp, 5, 4, 3, $code[$i], $ink); // tebalkan huruf
+    $rot = imagerotate($tmp, random_int(-18, 18), $tbg);
+    $dw = random_int(34, 42);
+    $dh = random_int(48, 58);
+    imagecopyresampled(
+        $img, $rot,
+        $startX + $i * $cell + random_int(-2, 3), random_int(4, $H - $dh - 4),
+        0, 0, $dw, $dh, imagesx($rot), imagesy($rot)
+    );
+    imagedestroy($tmp);
+    imagedestroy($rot);
+}
+
+// Gangguan di atas huruf: garis dan titik
+for ($i = 0; $i < 3; $i++) {
+    $c = imagecolorallocate($img, random_int(150, 200), random_int(150, 200), random_int(150, 200));
+    imagesetthickness($img, 1);
+    imageline($img, random_int(0, $W), random_int(0, $H), random_int(0, $W), random_int(0, $H), $c);
+}
+imagesetthickness($img, 1);
+for ($i = 0; $i < 160; $i++) {
+    $c = imagecolorallocate($img, random_int(90, 200), random_int(90, 200), random_int(90, 200));
+    imagesetpixel($img, random_int(0, $W - 1), random_int(0, $H - 1), $c);
+}
+
+imagepng($img);
+imagedestroy($img);

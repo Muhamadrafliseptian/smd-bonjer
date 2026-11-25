@@ -34,6 +34,19 @@ $wajibLabel = [
 
 $D = [];       // nilai untuk mengisi ulang form
 $formId = '';  // id record yang sedang diubah (hanya admin)
+$captchaOk = true;
+
+/** Cek kode gambar. Kode hanya berlaku sekali pakai dan kedaluwarsa setelah 2 jam. */
+function smd_captcha_ok($input)
+{
+    $c = $_SESSION['smd_captcha'] ?? null;
+    unset($_SESSION['smd_captcha']); // sekali pakai, benar atau salah
+    if (!is_array($c) || empty($c['code']) || (time() - (int)($c['time'] ?? 0)) > 7200) {
+        return false;
+    }
+    $in = strtoupper(preg_replace('/\s+/', '', (string)$input));
+    return $in !== '' && hash_equals((string)$c['code'], $in);
+}
 
 /* ---------- Simpan ---------- */
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
@@ -57,6 +70,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $clean[$k] = $s;
         }
     }
+    // Captcha gambar: wajib untuk pengunjung publik, admin yang sudah login dilewati.
+    $captchaOk = $isAdmin || smd_captcha_ok($_POST['captcha'] ?? '');
+    unset($clean['captcha']); // jangan ikut tersimpan ke database
+
     // Hanya admin yang boleh menimpa data lama; pengunjung selalu membuat data baru.
     $id = ($isAdmin && !empty($clean['id'])) ? (string)$clean['id'] : 'smd_' . uniqid('', true);
     unset($clean['id']);
@@ -104,7 +121,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if (!$found) {
         $out[] = $record;
     }
-    $saveResult = $salah ? false : db_save(['surveys' => $out]);
+    $saveResult = ($salah || !$captchaOk) ? false : db_save(['surveys' => $out]);
     // Jangan hanya percaya nilai kembalian db_save(): cek langsung apakah data sudah ada di database.
     $ok = false;
     if ($saveResult !== false) {
@@ -116,7 +133,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
     }
 
-    $D = $clean;
+    $D = $clean; // captcha sudah dibuang dari $clean, jadi kolomnya kosong lagi
     $formId = $isAdmin ? $id : '';
     if ($ok) {
         $saved = true;
@@ -124,7 +141,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         log_aksi("Simpan kuesioner ID=$id dari " . ($_SERVER['REMOTE_ADDR'] ?? 'unknown'));
     } else {
         $err = 'Jawaban belum bisa disimpan. Coba tekan Simpan jawaban sekali lagi. Jika tetap gagal, hubungi petugas.';
-        if ($salah) {
+        if (!$captchaOk) {
+            $err = 'Jawaban belum disimpan karena kode pada gambar salah atau sudah kedaluwarsa. Ketik kode pada gambar yang baru, lalu tekan Simpan jawaban lagi. Jawaban Anda tidak hilang.';
+        } elseif ($salah) {
             $err = 'Jawaban belum disimpan. Periksa isian ini: ' . implode('; ', $salah) . '.';
         } elseif ($isAdmin) {
             $err .= ' (Catatan admin: periksa apakah folder data/ dan file kuesioner.json bisa ditulis oleh server.)';
@@ -333,6 +352,12 @@ textarea.ctl{min-height:5.5em;resize:vertical;line-height:1.4}
 .smd-btn[hidden]{display:none}
 .smd-nav .smd-btn{flex:1 1 8em;min-width:0}
 .smd-nav .smd-btn.ghost{flex:0 0 auto}
+
+.cap{display:flex;align-items:center;gap:.8em;flex-wrap:wrap}
+.cap img{display:block;max-width:100%;height:auto;border:2px solid var(--edge);border-radius:6px;background:#f4f6f9}
+.cap-new{display:none;min-height:2.9em;padding:.2em .8em;border:2px solid var(--ac);border-radius:6px;background:#fff;color:var(--ac);font:inherit;font-size:.85em;font-weight:600;cursor:pointer}
+.cap-new:hover{background:var(--ac-bg)}
+.js .cap-new{display:inline-flex;align-items:center}
 
 .done{padding:1.4em 0 1.8em}
 .done h1{margin:0 0 .4em;font-size:1.6em;line-height:1.25}
@@ -609,6 +634,12 @@ textarea.ctl{min-height:5.5em;resize:vertical;line-height:1.4}
 
                 echo smd_q('Sebutkan masalah kesehatan lain yang ditemukan di sekitar tempat tinggal Anda, serta kritik dan saran untuk layanan Puskesmas Kebon Jeruk.', smd_area('saran', 'Tulis di sini'), ['optional' => true]);
 
+                if (!$isAdmin) {
+                    $capHint = '<div class="cap"><img id="capImg" src="captcha.php?v=' . time() . '" width="230" height="76" alt="Gambar berisi 5 huruf dan angka untuk kode pengaman">'
+                        . '<button type="button" class="cap-new" id="capNew">Ganti gambar</button></div>';
+                    echo smd_q('Ketik 5 huruf/angka yang terlihat pada gambar', smd_input('captcha', 'text', 'Kode pada gambar', 'maxlength="10" autocomplete="off" autocapitalize="characters" spellcheck="false"'), ['main' => false, 'hint' => $capHint]);
+                }
+
                 echo smd_section_end();
                 ?>
 
@@ -838,6 +869,17 @@ textarea.ctl{min-height:5.5em;resize:vertical;line-height:1.4}
         }
         updateConds();
     });
+
+    /* ---------- Ganti gambar captcha ---------- */
+    var capImg = document.getElementById('capImg');
+    var capNew = document.getElementById('capNew');
+    if (capImg && capNew) {
+        capNew.addEventListener('click', function () {
+            capImg.src = 'captcha.php?v=' + Date.now();
+            var ci = document.getElementById('f_captcha');
+            if (ci) { ci.value = ''; ci.focus(); }
+        });
+    }
 
     updateConds();
     show(form.getAttribute('data-start') === 'last' ? total - 1 : 0, false);
