@@ -17,9 +17,16 @@ if (!isset($_SESSION['admin_logged_in']) || $_SESSION['admin_logged_in'] !== tru
 
 log_aksi("POST dari " . ($_SERVER['REMOTE_ADDR'] ?? 'unknown'));
 
-/** Kembali ke dashboard dengan pesan; filter yang sedang dipakai ikut dibawa. */
+/** Kembali ke dashboard dengan pesan via session; filter yang sedang dipakai ikut dibawa. */
 function smd_back_to_dashboard(string $msg, string $err, string $back): void
 {
+    if ($msg !== '') {
+        $_SESSION['flash_msg'] = $msg;
+    }
+    if ($err !== '') {
+        $_SESSION['flash_err'] = $err;
+    }
+
     $q = [];
     parse_str($back, $b);
     foreach (['search', 'status', 'kelurahan', 'risiko'] as $k) {
@@ -27,12 +34,7 @@ function smd_back_to_dashboard(string $msg, string $err, string $back): void
             $q[$k] = $b[$k];
         }
     }
-    if ($msg !== '') {
-        $q['msg'] = $msg;
-    }
-    if ($err !== '') {
-        $q['err'] = $err;
-    }
+
     header('Location: dashboard.php' . ($q ? '?' . http_build_query($q) : ''));
     exit;
 }
