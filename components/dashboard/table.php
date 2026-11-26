@@ -95,7 +95,6 @@ $backQs    = (string)($_SERVER['QUERY_STRING'] ?? ''); // supaya filter tidak hi
                     <td>
                         <div class="action-group">
                             <a class="btn-xs" href="detail.php?id=<?= urlencode($id); ?>">Detail</a>
-                            <a class="btn-xs" href="form.php?edit_id=<?= urlencode($id); ?>">Edit</a>
                             <?php if ($st === 'draft'): ?>
                                 <form method="post" action="dashboard.php" style="display:inline;">
                                     <input type="hidden" name="action" value="valid">
