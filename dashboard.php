@@ -18,13 +18,6 @@ $status       = in_array($_GET['status'] ?? '', ['', 'valid', 'draft'], true) ? 
 $selectedKel  = trim((string)($_GET['kelurahan'] ?? ''));
 $selectedRisk = trim((string)($_GET['risiko'] ?? ''));
 
-$activeFilterParams = array_filter([
-    'search'    => $search,
-    'status'    => $status,
-    'kelurahan' => $selectedKel,
-    'risiko'    => $selectedRisk,
-], static fn($v) => $v !== '');
-
 // Proses Validasi (POST)
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'valid' && !empty($_POST['id'])) {
     $targetId = (string)$_POST['id'];
@@ -41,18 +34,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'valid
     unset($row);
 
     if ($found && db_save(['surveys' => $allData])) {
-        $_SESSION['flash_msg'] = 'Data kuesioner berhasil divalidasi.';
+        header('Location: ' . build_url('dashboard.php', ['msg' => 'Data kuesioner berhasil divalidasi.']));
     } else {
-        $_SESSION['flash_err'] = 'Gagal memvalidasi data.';
+        header('Location: ' . build_url('dashboard.php', ['err' => 'Gagal memvalidasi data.']));
     }
-
-    header('Location: ' . build_url('dashboard.php', $activeFilterParams));
     exit;
 }
 
-$msg = trim((string)($_SESSION['flash_msg'] ?? ''));
-$err = trim((string)($_SESSION['flash_err'] ?? ''));
-unset($_SESSION['flash_msg'], $_SESSION['flash_err']);
+$msg = trim((string)($_GET['msg'] ?? ''));
+$err = trim((string)($_GET['err'] ?? ''));
 
 // Hitung Statistik & Urutkan Terbaru
 $allRows = db_all();
@@ -120,6 +110,7 @@ render_layout_start('Dashboard — ' . APP_NAME, 'dashboard');
         <h2>Survei Mawas Diri — Puskesmas Kebon Jeruk</h2>
         <p>Rekapitulasi, verifikasi, dan pengelolaan data kuesioner warga.</p>
     </div>
+    <div><a class="btn btn-outline" href="import.php">Impor data</a></div>
 </div>
 
 <?php if ($msg !== ''): ?>
