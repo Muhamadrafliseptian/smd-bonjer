@@ -1,7 +1,8 @@
 <?php
 /**
- * proses.php — Proses simpan / hapus kuesioner.
- * Public (tanpa login). Hanya butuh POST.
+ * proses.php — Proses hapus (satu / banyak) dan simpan/ubah kuesioner.
+ * HANYA UNTUK ADMIN yang sudah login. Form publik (form.php) menyimpan lewat dirinya sendiri,
+ * bukan lewat file ini, supaya captcha tidak bisa dilewati.
  */
 
 session_start();
@@ -9,14 +10,91 @@ require_once __DIR__ . '/config.php';
 require_once __DIR__ . '/view.php';
 require_once __DIR__ . '/database.php';
 
-// Boleh akses dari public, tapi log akses
+if (!isset($_SESSION['admin_logged_in']) || $_SESSION['admin_logged_in'] !== true) {
+    header('Location: login.php');
+    exit;
+}
+
 log_aksi("POST dari " . ($_SERVER['REMOTE_ADDR'] ?? 'unknown'));
+
+/** Kembali ke dashboard dengan pesan; filter yang sedang dipakai ikut dibawa. */
+function smd_back_to_dashboard(string $msg, string $err, string $back): void
+{
+    $q = [];
+    parse_str($back, $b);
+    foreach (['search', 'status', 'kelurahan', 'risiko'] as $k) {
+        if (isset($b[$k]) && is_string($b[$k]) && $b[$k] !== '') {
+            $q[$k] = $b[$k];
+        }
+    }
+    if ($msg !== '') {
+        $q['msg'] = $msg;
+    }
+    if ($err !== '') {
+        $q['err'] = $err;
+    }
+    header('Location: dashboard.php' . ($q ? '?' . http_build_query($q) : ''));
+    exit;
+}
 
 $msg = '';
 $err = '';
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $aksi = $_POST['aksi'] ?? '';
+
+    if ($aksi === 'hapus') {
+        $back  = (string)($_POST['back'] ?? '');
+        $csrf  = (string)($_POST['csrf'] ?? '');
+        $token = (string)($_SESSION['csrf_hapus'] ?? '');
+        if ($token === '' || !hash_equals($token, $csrf)) {
+            smd_back_to_dashboard('', 'Sesi tidak valid. Muat ulang halaman, lalu coba hapus lagi.', $back);
+        }
+
+        // Satu data (id) atau banyak data (ids[]); duplikat dibuang.
+        $ids = [];
+        foreach ((array)($_POST['ids'] ?? []) as $i) {
+            if (is_string($i) && $i !== '') {
+                $ids[] = $i;
+            }
+        }
+        if (isset($_POST['id']) && is_string($_POST['id']) && $_POST['id'] !== '') {
+            $ids[] = $_POST['id'];
+        }
+        $ids = array_values(array_unique($ids));
+        if (!$ids) {
+            smd_back_to_dashboard('', 'Tidak ada data yang dipilih untuk dihapus.', $back);
+        }
+
+        $set = array_flip($ids);
+        $keep = [];
+        $removed = 0;
+        foreach (db_all() as $r) {
+            if (isset($r['id']) && isset($set[(string)$r['id']])) {
+                $removed++;
+                continue;
+            }
+            $keep[] = $r;
+        }
+        if ($removed === 0) {
+            smd_back_to_dashboard('', 'Data tidak ditemukan. Mungkin sudah dihapus sebelumnya.', $back);
+        }
+
+        $saveResult = db_save(['surveys' => $keep]);
+        // Jangan hanya percaya nilai kembalian db_save(): cek langsung apakah datanya benar-benar sudah hilang.
+        $masihAda = 0;
+        foreach (db_all() as $r) {
+            if (isset($r['id']) && isset($set[(string)$r['id']])) {
+                $masihAda++;
+            }
+        }
+        if ($saveResult === false || $masihAda > 0) {
+            smd_back_to_dashboard('', 'Data gagal dihapus. Periksa apakah folder data/ dan file kuesioner.json bisa ditulis oleh server.', $back);
+        }
+
+        log_aksi('Hapus kuesioner (' . $removed . ' data) ID=' . implode(',', $ids) . ' oleh ' . ($_SESSION['admin_user'] ?? 'admin'));
+        smd_back_to_dashboard($removed . ' data kuesioner berhasil dihapus.', '', $back);
+    }
 
     if ($aksi === 'simpan' || $aksi === 'edit') {
         $raw = $_POST;
@@ -81,24 +159,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         } else {
             $err = '<div class="' . ALERT_ERROR . '">Gagal menyimpan data.</div>';
         }
-    } elseif ($aksi === 'hapus') {
-        $id = $_POST['id'] ?? '';
-        if ($id !== '') {
-            $ok = db_delete($id);
-            if ($ok) {
-                $msg = '<div class="' . ALERT_SUCCESS . '">Data berhasil dihapus.</div>';
-            } else {
-                $err = '<div class="' . ALERT_ERROR . '">Gagal menghapus data.</div>';
-            }
-        } else {
-            $err = '<div class="' . ALERT_ERROR . '">ID tidak diberikan.</div>';
-        }
     }
 }
 
-// Redirect belakang (avoid form resubmission) -> bawa msg/err dari GET
-$msg = $_GET['msg'] ?? $msg;
-$err = $_GET['err'] ?? $err;
+// Pesan dari GET ditampilkan sebagai teks biasa (di-escape), bukan HTML.
+if ($msg === '' && isset($_GET['msg'])) {
+    $msg = '<div class="' . ALERT_SUCCESS . '">' . htmlspecialchars((string)$_GET['msg'], ENT_QUOTES, 'UTF-8') . '</div>';
+}
+if ($err === '' && isset($_GET['err'])) {
+    $err = '<div class="' . ALERT_ERROR . '">' . htmlspecialchars((string)$_GET['err'], ENT_QUOTES, 'UTF-8') . '</div>';
+}
 
 layout_head('Proses — ' . APP_NAME);
 ?>
